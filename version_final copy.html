@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Odoo Voz · TFG · Byron Perez Chavez · UEV 2026</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,700;1,9..40,300&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    /* ─── DESIGN TOKENS ─── */
+    :root {
+      --bg: #070810;
+      --s1: #0f1120;
+      --s2: #161828;
+      --bd: rgba(255, 255, 255, .07);
+      --ac: #3dffa0;
+      --bl: #5b9cf6;
+      --rd: #ff5757;
+      --am: #f9b233;
+      --tx: #e8eaf2;
+      --mu: #5a607a;
+      --m2: #8890a8;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--tx);
+      font-family: 'DM Sans', sans-serif;
+      touch-action: none;
+    }
+
+    /* ─── CANVAS + ORBS ─── */
+    #cvs {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(160px);
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1.4s ease;
+    }
+
+    .orb.on {
+      opacity: 1;
+    }
+
+    #o1 {
+      width: 60vw;
+      height: 60vw;
+      top: -25%;
+      right: -20%;
+      background: radial-gradient(circle, rgba(61, 255, 160, .11), transparent 70%);
+    }
+
+    #o2 {
+      width: 55vw;
+      height: 55vw;
+      bottom: -22%;
+      left: -12%;
+      background: radial-gradient(circle, rgba(91, 156, 246, .09), transparent 70%);
+    }
+
+    #o3 {
+      width: 45vw;
+      height: 45vw;
+      top: 15%;
+      left: 15%;
+      background: radial-gradient(circle, rgba(255, 87, 87, .08), transparent 70%);
+    }
+
+    /* ─── HEADER BAR (44px, logo) ─── */
+    #hdr {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      padding: 0 5vw;
+      background: linear-gradient(to bottom, rgba(7, 8, 16, .88), transparent);
+      pointer-events: none;
+    }
+
+    #hdr img {
+      height: 26px;
+      opacity: .65;
+      filter: drop-shadow(0 1px 5px rgba(0, 0, 0, .99));
+    }
+
+    /* ─── CHROME ─── */
+    #prog {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: rgba(255, 255, 255, .04);
+      z-index: 500;
+    }
+
+    #pfill {
+      height: 2px;
+      background: linear-gradient(90deg, var(--ac), var(--bl));
+      transition: width .5s ease;
+    }
+
+    #ctr {
+      position: fixed;
+      bottom: 28px;
+      right: 42px;
+      z-index: 500;
+      font-size: 11px;
+      letter-spacing: 2.5px;
+      color: var(--mu);
+    }
+
+    #dots {
+      position: fixed;
+      bottom: 33px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      z-index: 500;
+    }
+
+    .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, .14);
+      transition: all .3s;
+      cursor: pointer;
+    }
+
+    .dot.on {
+      width: 20px;
+      background: var(--ac);
+    }
+
+    .arr {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid var(--bd);
+      color: var(--m2);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 500;
+      transition: all .22s;
+      backdrop-filter: blur(6px);
+      touch-action: manipulation;
+    }
+
+    .arr:hover {
+      background: rgba(61, 255, 160, .1);
+      border-color: rgba(61, 255, 160, .3);
+      color: var(--ac);
+    }
+
+    #ap {
+      left: 16px;
+    }
+
+    #an {
+      right: 16px;
+    }
+
+    /* ─── SLIDE ENGINE ─── */
+    #deck {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      touch-action: none;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 66px 9vw 82px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .55s ease, transform .55s cubic-bezier(.16, 1, .3, 1);
+      transform: translateX(70px);
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateX(0);
+    }
+
+    .slide.ex-l {
+      opacity: 0;
+      transform: translateX(-70px);
+      pointer-events: none;
+    }
+
+    .slide.ex-r {
+      opacity: 0;
+      transform: translateX(70px);
+      pointer-events: none;
+    }
+
+    /* ─── ENTRANCE ANIMATIONS ─── */
+    .a {
+      opacity: 0;
+      transform: translateY(22px);
+    }
+
+    .slide.active .a {
+      animation: fu .6s cubic-bezier(.16, 1, .3, 1) forwards;
+    }
+
+    .slide.active .a:nth-child(1) {
+      animation-delay: .04s;
+    }
+
+    .slide.active .a:nth-child(2) {
+      animation-delay: .16s;
+    }
+
+    .slide.active .a:nth-child(3) {
+      animation-delay: .28s;
+    }
+
+    .slide.active .a:nth-child(4) {
+      animation-delay: .40s;
+    }
+
+    .slide.active .a:nth-child(5) {
+      animation-delay: .52s;
+    }
+
+    @keyframes fu {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .stag li {
+      opacity: 0;
+      transform: translateX(-16px);
+    }
+
+    .slide.active .stag li {
+      animation: sli .5s cubic-bezier(.16, 1, .3, 1) forwards;
+    }
+
+    .slide.active .stag li:nth-child(1) {
+      animation-delay: .38s;
+    }
+
+    .slide.active .stag li:nth-child(2) {
+      animation-delay: .54s;
+    }
+
+    .slide.active .stag li:nth-child(3) {
+      animation-delay: .70s;
+    }
+
+    .slide.active .stag li:nth-child(4) {
+      animation-delay: .86s;
+    }
+
+    @keyframes sli {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    /* ─── TYPOGRAPHY ─── */
+    h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(3.2rem, 7.5vw, 8.5rem);
+      line-height: .92;
+      letter-spacing: -2px;
+    }
+
+    h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.8rem, 3.8vw, 4rem);
+      line-height: 1.06;
+      letter-spacing: -1px;
+      margin-bottom: .9rem;
+    }
+
+    h3 {
+      font-size: clamp(.9rem, 1.3vw, 1.35rem);
+      font-weight: 700;
+      margin-bottom: .45rem;
+    }
+
+    p {
+      font-size: clamp(.82rem, 1.12vw, 1.08rem);
+      line-height: 1.72;
+      color: var(--m2);
+    }
+
+    strong {
+      color: var(--tx);
+      font-weight: 700;
+    }
+
+    .ac {
+      color: var(--ac);
+    }
+
+    .bl {
+      color: var(--bl);
+    }
+
+    .rd {
+      color: var(--rd);
+    }
+
+    .am {
+      color: var(--am);
+    }
+
+    .it {
+      font-style: italic;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--ac);
+      border: 1px solid rgba(61, 255, 160, .2);
+      background: rgba(61, 255, 160, .06);
+      padding: 5px 14px;
+      border-radius: 100px;
+      margin-bottom: 18px;
+    }
+
+    /* ─── LAYOUT ─── */
+    .g2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5vw;
+      align-items: center;
+      flex: 1;
+    }
+
+    .g2r {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 5vw;
+      align-items: center;
+      flex: 1;
+    }
+
+    /* ─── CARDS ─── */
+    .box {
+      background: var(--s1);
+      border: 1px solid var(--bd);
+      border-radius: 16px;
+      padding: clamp(14px, 2vw, 28px);
+    }
+
+    .gG {
+      border-color: rgba(61, 255, 160, .22);
+      box-shadow: 0 0 36px rgba(61, 255, 160, .05);
+    }
+
+    .gB {
+      border-color: rgba(91, 156, 246, .22);
+      box-shadow: 0 0 36px rgba(91, 156, 246, .05);
+    }
+
+    .gR {
+      border-color: rgba(255, 87, 87, .22);
+      box-shadow: 0 0 36px rgba(255, 87, 87, .05);
+    }
+
+    .gA {
+      border-color: rgba(249, 178, 51, .22);
+      box-shadow: 0 0 36px rgba(249, 178, 51, .05);
+    }
+
+    /* ─── PHONE MOCKUP ─── */
+    .ph-w {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+    }
+
+    .ph {
+      width: min(18vw, 200px);
+      aspect-ratio: 9/19.5;
+      background: #000;
+      border-radius: clamp(14px, 2.2vw, 28px);
+      box-shadow: 0 0 0 2px #1c1f2d, 0 0 0 4px #101218, 0 20px 50px rgba(0, 0, 0, .75), 0 0 36px rgba(61, 255, 160, .07);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .ph::before {
+      content: '';
+      position: absolute;
+      top: 7px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 48px;
+      height: 15px;
+      background: #0a0b10;
+      border-radius: 8px;
+      z-index: 5;
+      border: 2px solid #1c1f2d;
+    }
+
+    .ph video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* ─── KPI ─── */
+    .kpi {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2.8rem, 6vw, 6rem);
+      line-height: 1;
+    }
+
+    /* ─── BARS ─── */
+    .br {
+      margin-bottom: 14px;
+    }
+
+    .bm {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+
+    .bt {
+      height: 7px;
+      background: rgba(255, 255, 255, .05);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .bf {
+      height: 100%;
+      border-radius: 3px;
+      width: 0;
+      transition: width 1.6s cubic-bezier(.16, 1, .3, 1);
+    }
+
+    /* ─── LIST ─── */
+    .ul {
+      list-style: none;
+      margin-top: .9rem;
+    }
+
+    .ul li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      font-size: clamp(.78rem, 1.02vw, .94rem);
+      color: var(--m2);
+    }
+
+    .ul li i {
+      flex-shrink: 0;
+      margin-top: 3px;
+      font-size: .85em;
+    }
+
+    /* ─── CHAT ─── */
+    .chat {
+      background: #08090e;
+      border-radius: 14px;
+      padding: 14px;
+      border: 1px solid var(--bd);
+    }
+
+    .cb {
+      padding: 8px 13px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .cu {
+      background: var(--bl);
+      color: #fff;
+      margin-left: auto;
+      border-bottom-right-radius: 3px;
+    }
+
+    .cbo {
+      background: var(--s2);
+      border: 1px solid var(--bd);
+      border-bottom-left-radius: 3px;
+    }
+
+    /* ─── TIMELINE ─── */
+    .tl {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .tr {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 11px 15px;
+      border-radius: 12px;
+      background: var(--s1);
+      border: 1px solid var(--bd);
+    }
+
+    .td {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 11px;
+    }
+
+    .dG {
+      background: rgba(61, 255, 160, .12);
+      color: var(--ac);
+    }
+
+    .dB {
+      background: rgba(91, 156, 246, .12);
+      color: var(--bl);
+    }
+
+    .dR {
+      background: rgba(255, 87, 87, .12);
+      color: var(--rd);
+    }
+
+    .dA {
+      background: rgba(249, 178, 51, .12);
+      color: var(--am);
+    }
+
+    /* ─── MERCAFILO PHOTO LAYOUT ─── */
+    .merc-grid {
+      display: grid;
+      grid-template-columns: .9fr 1.1fr;
+      gap: 5vw;
+      flex: 1;
+      align-items: center;
+    }
+
+    .photo-frame {
+      position: relative;
+      height: min(60vh, 480px);
+    }
+
+    .photo-box {
+      width: 100%;
+      height: 100%;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      background: var(--s2);
+    }
+
+    .photo-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 18px;
+    }
+
+    .photo-overlay {
+      position: absolute;
+      bottom: -10px;
+      right: -14px;
+      background: rgba(7, 8, 16, .94);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(61, 255, 160, .28);
+      border-radius: 14px;
+      padding: 12px 16px;
+      max-width: 270px;
+      z-index: 20;
+      box-shadow: 0 8px 36px rgba(0, 0, 0, .6);
+    }
+
+    .po-tag {
+      font-size: 9.5px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--ac);
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    /* ─── ARCHITECTURE ─── */
+    .arch-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin-top: 1vh;
+      gap: 1.5vh;
+    }
+
+    .arch-stage {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .arch-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .arch-nodes {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      position: relative;
+      z-index: 2;
+    }
+
+    .arch-node {
+      background: var(--s1);
+      border: 1px solid var(--bd);
+      border-radius: 18px;
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      flex: 0 0 148px;
+      opacity: 0;
+      transform: scale(.85) translateY(20px);
+      transition: border-color .4s, box-shadow .4s;
+      position: relative;
+    }
+
+    .arch-node.lit {
+      animation: nodeIn .55s cubic-bezier(.16, 1, .3, 1) forwards;
+    }
+
+    @keyframes nodeIn {
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .arch-node:hover {
+      transform: translateY(-6px) !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .45);
+    }
+
+    .arch-node i {
+      font-size: 28px;
+    }
+
+    .arch-ring {
+      position: absolute;
+      inset: -6px;
+      border-radius: 22px;
+      border: 1px solid;
+      opacity: 0;
+    }
+
+    .arch-node.lit .arch-ring {
+      animation: ringPulse 2.4s ease infinite;
+    }
+
+    @keyframes ringPulse {
+      0% {
+        opacity: .6;
+        transform: scale(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(1.18);
+      }
+    }
+
+    .arch-spacer {
+      flex: 1;
+    }
+
+    .arch-path {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      fill: none;
+      stroke-width: 1.5;
+      transition: stroke-dashoffset .8s ease;
+    }
+
+    .arch-path.drawn {
+      stroke-dashoffset: 0;
+    }
+
+    /* ─── CODE CAROUSEL (FADE + BLUR — sin 3D, sin overflow) ─── */
+    .c3d-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: .4vh;
+      flex: 1;
+    }
+
+    .c3d-stage {
+      height: clamp(180px, 42vh, 340px);
+      position: relative;
+      flex-shrink: 0;
+      cursor: grab;
+      touch-action: none;
+      overflow: hidden;
+      border-radius: 16px;
+    }
+
+    .c3d-stage:active {
+      cursor: grabbing;
+    }
+
+    .c3d-track {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .c3d-card {
+      position: absolute;
+      inset: 0;
+      background: #0c0e1a;
+      border: 1px solid rgba(61, 255, 160, .14);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, .6);
+      opacity: 0;
+      filter: blur(8px);
+      transform: scale(.96);
+      transition: opacity .45s ease, filter .45s ease, transform .45s ease;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .c3d-card.c-active {
+      opacity: 1;
+      filter: blur(0);
+      transform: scale(1);
+      pointer-events: all;
+      z-index: 3;
+    }
+
+    .c3d-bar {
+      background: var(--s2);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border-bottom: 1px solid var(--bd);
+      flex-shrink: 0;
+    }
+
+    .c3d-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .c3d-title {
+      margin-left: 6px;
+      font-size: 11px;
+      color: var(--m2);
+      font-family: 'JetBrains Mono', monospace;
+      flex: 1;
+      text-align: center;
+    }
+
+    .c3d-body {
+      flex: 1;
+      overflow: hidden;
+      padding: 14px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(9px, .88vw, 11.5px);
+      line-height: 1.72;
+    }
+
+    .cl {
+      display: block;
+      white-space: pre;
+    }
+
+    .ck {
+      color: #c792ea;
+    }
+
+    .cf {
+      color: #82aaff;
+    }
+
+    .cs {
+      color: var(--ac);
+    }
+
+    .cc {
+      color: #546e7a;
+      font-style: italic;
+    }
+
+    .cv {
+      color: var(--tx);
+    }
+
+    .c3d-desc {
+      background: var(--s1);
+      border: 1px solid var(--bd);
+      border-radius: 11px;
+      padding: 10px 15px;
+      flex-shrink: 0;
+    }
+
+    .c3d-desc h3 {
+      font-size: .79rem;
+      color: var(--ac);
+      margin-bottom: 3px;
+    }
+
+    .c3d-desc p {
+      font-size: .77rem;
+      margin: 0;
+    }
+
+    .c3d-ctrl {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-shrink: 0;
+      padding: 2px 0;
+    }
+
+    .c3d-dot-nav {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .15);
+      cursor: pointer;
+      transition: all .28s;
+    }
+
+    .c3d-dot-nav.on {
+      width: 18px;
+      border-radius: 3px;
+      background: var(--ac);
+    }
+
+    .c3d-btn {
+      background: none;
+      border: 1px solid var(--bd);
+      color: var(--m2);
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .22s;
+      outline: none;
+      touch-action: manipulation;
+    }
+
+    .c3d-btn:hover {
+      border-color: rgba(61, 255, 160, .4);
+      color: var(--ac);
+    }
+
+    /* ─── STAT BADGE ROW ─── */
+    .sb {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--s1);
+      border: 1px solid var(--bd);
+      border-radius: 13px;
+      padding: 12px 17px;
+      margin-bottom: 10px;
+    }
+
+    .sb-num {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.4rem, 2.5vw, 2.4rem);
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .sb-tag {
+      margin-left: auto;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: .8rem;
+      font-weight: 700;
+    }
+  </style>
+</head>
+
+<body>
+
+  <canvas id="cvs"></canvas>
+  <div class="orb" id="o1"></div>
+  <div class="orb" id="o2"></div>
+  <div class="orb" id="o3"></div>
+
+  <div id="hdr"><img src="log.svg" alt="Universidad Europea de Valencia"></div>
+  <div id="prog">
+    <div id="pfill" style="width:8.33%"></div>
+  </div>
+  <div id="ctr">1 / 12</div>
+  <div id="dots"></div>
+  <button class="arr" id="ap" onclick="go(-1)">&#8592;</button>
+  <button class="arr" id="an" onclick="go(1)">&#8594;</button>
+
+  <div id="deck">
+
+    <!-- ═══════ 1 · PORTADA ═══════ -->
+    <div class="slide active" data-orb="1">
+      <div style="max-width:860px;padding-right:18vw;">
+        <div class="eyebrow a"><i class="fa-solid fa-microphone-lines"></i>Trabajo Fin de Grado · UEV · 2026</div>
+        <h1 class="a">Odoo<br><span class="ac it">Voz.</span></h1>
+        <p class="a"
+          style="font-size:clamp(1rem,1.8vw,1.6rem);color:var(--tx);margin:18px 0 8px;max-width:600px;line-height:1.4;">
+          Integración de Reconocimiento de Voz para la Automatización<br>de Registros en un Sistema ERP.
+        </p>
+        <p class="a" style="margin-top:24px;font-size:.88rem;">
+          <strong>Byron Andres Perez Chavez</strong>&ensp;·&ensp;Grado en Ingeniería de Organización Industrial
+        </p>
+        <div class="a" style="margin-top:36px;display:flex;align-items:center;gap:20px;opacity:.38;">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" style="height:24px;" alt="">
+          <span style="color:var(--bd);">|</span>
+          <img src="https://img.icons8.com/color/96/google-logo.png" style="height:24px;" alt="">
+          <span style="color:var(--bd);">|</span>
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Odoo_logo.svg/1200px-Odoo_logo.svg.png"
+            style="height:20px;filter:invert(1) brightness(2);" alt="">
+          <span style="color:var(--bd);">|</span>
+          <i class="fa-brands fa-python" style="font-size:22px;color:rgba(255,255,255,.5);"></i>
+        </div>
+      </div>
+      <div
+        style="position:absolute;right:8vw;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;opacity:.09;pointer-events:none;font-family:'JetBrains Mono',monospace;font-size:clamp(.65rem,.85vw,.85rem);color:var(--ac);letter-spacing:1px;">
+        <span>Python · asyncio</span><span>google-genai</span><span>XML-RPC · Odoo</span>
+        <span>Cloud Run · Docker</span><span>telegram-bot-api</span><span>HitL · JSON</span><span>Gemini 2.5
+          Flash</span>
+      </div>
+    </div>
+
+    <!-- ═══════ 2 · EL PROBLEMA ═══════ -->
+    <div class="slide" data-orb="3">
+      <div class="eyebrow a">01 · El Desafío: Fricción Operativa</div>
+      <div class="g2" style="flex:1;align-items:center;">
+        <div>
+          <h2 class="a">El ERP que nadie<br>usa <span class="rd">en campo.</span></h2>
+          <p class="a">Los ERPs modernos son potentes, pero presentan barreras críticas para el usuario de campo:
+            demasiados clics, sin acceso móvil real, y resistencia al cambio.</p>
+          <ul class="ul stag a">
+            <li><i class="fa-solid fa-xmark rd"></i><span><strong>Complejidad de interfaz:</strong> +12 campos
+                obligatorios en CRM, navegación de 4 pantallas.</span></li>
+            <li><i class="fa-solid fa-xmark rd"></i><span><strong>Baja movilidad:</strong> comerciales <strong>registran
+                  de memoria</strong> al volver a oficina, perdiendo contexto.</span></li>
+            <li><i class="fa-solid fa-xmark rd"></i><span><strong>Resistencia al cambio:</strong> el personal prefiere
+                herramientas familiares como Telegram o WhatsApp.</span></li>
+          </ul>
+        </div>
+        <!-- ── Columna derecha: screenshot grande + KPI flotante ── -->
+        <div class="a" style="position:relative;height:min(58vh,440px);">
+          <!-- Odoo screenshot visible y prominente -->
+          <div
+            style="width:100%;height:100%;border-radius:18px;overflow:hidden;border:1px solid rgba(255,87,87,.18);box-shadow:0 24px 64px rgba(0,0,0,.65),0 0 0 1px rgba(255,87,87,.06);">
+            <img src="Presentacion-Mercafilo/odoo producto.png" style="width:100%;height:100%;object-fit:cover;"
+              alt="Odoo UI — Complejidad de interfaz">
+            <!-- Overlay oscuro suave para legibilidad del KPI -->
+            <div
+              style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(7,8,16,.45) 0%,rgba(7,8,16,.08) 100%);">
+            </div>
+          </div>
+          <!-- KPI flotante glassmorphism — esquina inferior izquierda -->
+          <div
+            style="position:absolute;bottom:-12px;left:-16px;background:rgba(7,8,16,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,87,87,.32);border-radius:16px;padding:14px 20px;z-index:20;box-shadow:0 8px 36px rgba(0,0,0,.7),0 0 24px rgba(255,87,87,.08);">
+            <p
+              style="font-size:.62rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--rd);margin-bottom:6px;font-weight:700;">
+              Benchmark Manual · n=160 · Tabla 7 TFG</p>
+            <div
+              style="font-family:'DM Serif Display',serif;font-size:clamp(2.8rem,5vw,5rem);line-height:1;color:var(--rd);">
+              <span id="n53">0</span><span style="font-size:.35em;vertical-align:middle;">s</span>
+            </div>
+            <p style="font-size:.74rem;margin-top:5px;color:var(--m2);max-width:160px;line-height:1.4;">Atención visual
+              + motora <strong style="color:var(--tx);">ininterrumpida</strong> por registro</p>
+            <div style="margin-top:8px;height:4px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden;">
+              <div id="fbar"
+                style="height:100%;width:0;background:var(--rd);border-radius:3px;transition:width 2.8s cubic-bezier(.16,1,.3,1);">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 3 · LA SOLUCIÓN ═══════ -->
+    <div class="slide" data-orb="2">
+      <div class="eyebrow a">02 · La Solución</div>
+      <div class="g2" style="flex:1;">
+        <div>
+          <h2 class="a">Habla.<br><span class="ac">El resto lo hace el BOT.</span></h2>
+          <p class="a">El bot de Telegram captura notas de voz en lenguaje natural, las transcribe con Gemini 2.5 Flash
+            y escribe directamente en Odoo ERP.</p>
+          <ul class="ul stag a">
+            <li><i class="fa-solid fa-check ac"></i><span><strong>Cero curva de aprendizaje</strong> — Telegram ya lo
+                usan todos los comerciales.</span></li>
+            <li><i class="fa-solid fa-database bl"></i><span><strong>Modelo-agnóstico</strong> — CRM, contactos, stock,
+                ventas, facturas, tareas.</span></li>
+            <li><i class="fa-solid fa-shield-halved bl"></i><span><strong>Human in the Loop</strong> — confirmación
+                obligatoria antes de escribir en BD.</span></li>
+            <li><i class="fa-brands fa-google" style="color:#4285f4;"></i><span>Desplegado en <strong>Google Cloud Run
+                  Always On</strong> — latencia mínima garantizada.</span></li>
+          </ul>
+        </div>
+        <div class="ph-w a">
+          <div class="ph">
+            <video autoplay muted loop playsinline>
+              <source src="Presentacion-Mercafilo/1cliente.mp4" type="video/mp4">
+            </video>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 4 · MERCAFILO ═══════ -->
+    <div class="slide" data-orb="1">
+      <div class="eyebrow a">03 · Validación de Mercado</div>
+      <div class="merc-grid a" style="flex:1;">
+        <div>
+          <h2>La visita que<br>confirmó el <span class="ac">dolor real.</span></h2>
+          <p style="margin-bottom:13px;">Se realizó una <strong>presentación del prototipo funcional</strong> ante
+            Tomás, director general de Mercafilo empresa comercial con equipo de campo en Valencia durante el Sprint
+            9.</p>
+          <ul class="ul stag">
+            <li><i class="fa-solid fa-check ac"></i><span><strong>Confirmado:</strong> los comerciales no usaban Odoo en
+                ruta, acumulando registros al final del día.</span></li>
+            <li><i class="fa-solid fa-check ac"></i><span>El director valoró la <strong>cero curva de
+                  aprendizaje</strong> y la integración nativa con Telegram.</span></li>
+            <li><i class="fa-solid fa-circle-xmark am"></i><span><strong>No implantado</strong> por barreras de
+                Compliance IT: el departamento no estaba preparado para conectar su CRM con LLMs externos.</span></li>
+          </ul>
+          <div class="box" style="margin-top:12px;border-left:3px solid var(--am);padding:10px 14px;">
+            <p style="margin:0;font-size:.8rem;"><strong style="color:var(--am);">Hallazgo clave:</strong> La adopción
+              de IA no la frena la usabilidad de la solución, sino la rigidez de las políticas IT heredadas.</p>
+          </div>
+        </div>
+        <div class="photo-frame">
+          <div class="photo-box">
+            <img src="Presentacion-Mercafilo/Visitamercaaafilo.jpg" alt="Visita a Mercafilo — Sprint 9">
+          </div>
+          <div class="photo-overlay">
+            <div class="po-tag"><i class="fa-brands fa-telegram"></i>&ensp;Demo en directo · Sprint 9</div>
+            <div class="cb cu" style="font-size:11px;padding:6px 10px;margin-bottom:6px;">🎙 "Oportunidad para
+              Mercafilo, 50.000€, cierre antes de julio."</div>
+            <div class="cb cbo" style="font-size:11px;padding:6px 10px;">✅ <strong>CRM actualizado</strong> · 21.80s ·
+              <span style="color:var(--ac);">Ver en Odoo ↗</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 5 · ARQUITECTURA ═══════ -->
+    <div class="slide" data-orb="2" id="sl-arch">
+      <div class="eyebrow a">04 · Diseño Técnico</div>
+      <h2 class="a" style="margin-bottom:.4rem;">Cada voz, un registro.<br><span class="ac">4 capas. Sin plugins.</span>
+      </h2>
+      <div class="arch-wrap">
+        <div class="arch-stage">
+          <svg class="arch-svg" id="arch-svg" viewBox="0 0 1000 160" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="g12" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#3dffa0" stop-opacity=".8" />
+                <stop offset="100%" stop-color="#3dffa0" stop-opacity=".2" />
+              </linearGradient>
+              <linearGradient id="g23" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#3dffa0" stop-opacity=".5" />
+                <stop offset="100%" stop-color="#5b9cf6" stop-opacity=".5" />
+              </linearGradient>
+              <linearGradient id="g34" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#5b9cf6" stop-opacity=".2" />
+                <stop offset="100%" stop-color="#5b9cf6" stop-opacity=".8" />
+              </linearGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="c" />
+                <feMerge>
+                  <feMergeNode in="c" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <path id="p12" class="arch-path" d="M 210 80 C 270 80 280 80 340 80" stroke="url(#g12)"
+              filter="url(#glow)" />
+            <path id="p23" class="arch-path" d="M 540 80 C 590 80 600 80 650 80" stroke="url(#g23)"
+              filter="url(#glow)" />
+            <path id="p34" class="arch-path" d="M 850 80 C 900 80 910 80 960 80" stroke="url(#g34)"
+              filter="url(#glow)" />
+            <circle r="6" fill="#3dffa0" filter="url(#glow)" opacity="0" id="pt12">
+              <animateMotion id="am12" dur="1.8s" repeatCount="indefinite" begin="indefinite">
+                <mpath href="#p12" />
+              </animateMotion>
+            </circle>
+            <circle r="6" fill="#5dffc0" filter="url(#glow)" opacity="0" id="pt23">
+              <animateMotion id="am23" dur="1.8s" repeatCount="indefinite" begin="indefinite">
+                <mpath href="#p23" />
+              </animateMotion>
+            </circle>
+            <circle r="6" fill="#5b9cf6" filter="url(#glow)" opacity="0" id="pt34">
+              <animateMotion id="am34" dur="1.8s" repeatCount="indefinite" begin="indefinite">
+                <mpath href="#p34" />
+              </animateMotion>
+            </circle>
+          </svg>
+          <div class="arch-nodes">
+            <div class="arch-node" id="an1" style="border-color:rgba(44,165,224,.35);">
+              <div class="arch-ring" style="border-color:rgba(44,165,224,.5);"></div>
+              <i class="fa-brands fa-telegram" style="color:#2ca5e0;"></i>
+              <strong>Telegram</strong><small style="color:var(--mu);">Nota de Voz OGG</small>
+            </div>
+            <div class="arch-spacer"></div>
+            <div class="arch-node" id="an2" style="border-color:rgba(61,255,160,.35);">
+              <div class="arch-ring" style="border-color:rgba(61,255,160,.6);"></div>
+              <i class="fa-brands fa-python" style="color:var(--ac);"></i>
+              <strong>Bot Python</strong><small style="color:var(--mu);">Cloud Run · Always On</small>
+            </div>
+            <div class="arch-spacer"></div>
+            <div class="arch-node" id="an3" style="border-color:rgba(66,133,244,.35);">
+              <div class="arch-ring" style="border-color:rgba(66,133,244,.6);"></div>
+              <i class="fa-brands fa-google" style="color:#4285f4;"></i>
+              <strong>Gemini 2.5 Flash</strong><small style="color:var(--mu);">STT + LLM · Multimodal</small>
+            </div>
+            <div class="arch-spacer"></div>
+            <div class="arch-node" id="an4" style="border-color:rgba(91,156,246,.35);">
+              <div class="arch-ring" style="border-color:rgba(91,156,246,.5);"></div>
+              <i class="fa-solid fa-database" style="color:var(--bl);"></i>
+              <strong>Odoo ERP</strong><small style="color:var(--mu);">XML-RPC · Sin plugins</small>
+            </div>
+          </div>
+        </div>
+        <div class="box gG a" style="border-left:3px solid var(--ac);padding:11px 18px;">
+          <h3 style="color:var(--ac);margin-bottom:4px;font-size:.88rem;"><i
+              class="fa-solid fa-wand-magic-sparkles"></i>&ensp;Inyección Dinámica de Esquema — La innovación central
+          </h3>
+          <p style="margin:0;font-size:.85rem;">El bot consulta en tiempo real qué campos existen en el modelo Odoo
+            destino y los inyecta en el prompt de Gemini. Funciona para <strong>cualquier módulo sin tocar el
+              código</strong>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 6 · CÓDIGO ═══════ -->
+    <div class="slide" data-orb="2" id="sl-code">
+      <div class="eyebrow a">05 · El Código que lo Hace Posible</div>
+      <p class="a" style="max-width:620px;margin-bottom:.5vh;">Tres funciones del repositorio donde reside la innovación
+        técnica. Desliza o usa las flechas.</p>
+      <div class="c3d-section a">
+        <div class="c3d-stage" id="cstage">
+          <div class="c3d-track" id="c3track">
+            <div class="c3d-card" data-idx="0">
+              <div class="c3d-bar">
+                <div class="c3d-dot" style="background:#ff5f57;"></div>
+                <div class="c3d-dot" style="background:#febc2e;"></div>
+                <div class="c3d-dot" style="background:#28c840;"></div>
+                <div class="c3d-title">ai_processor.py — extract_structured_data()</div>
+              </div>
+              <div class="c3d-body">
+                <span class="cl"><span class="ck">async</span> <span class="ck">def</span> <span
+                    class="cf">extract_structured_data</span><span class="cv">(self, text, model_name):</span></span>
+                <span class="cl"><span class="cc"> # 1. Obtener el esquema REAL del modelo desde Odoo</span></span>
+                <span class="cl"><span class="cv"> schema = </span><span class="ck">await</span><span class="cv">
+                    self.odoo.</span><span class="cf">get_model_fields</span><span class="cv">(model_name)</span></span>
+                <span class="cl"></span>
+                <span class="cl"><span class="cc"> # 2. Construir mapa enriquecido: tipo, etiqueta,
+                    relaciones</span></span>
+                <span class="cl"><span class="cv"> rich_schema = {}</span></span>
+                <span class="cl"><span class="ck"> for</span><span class="cv"> k, v </span><span
+                    class="ck">in</span><span class="cv"> schema.items():</span></span>
+                <span class="cl"><span class="cv"> field_desc = f</span><span class="cs">"{v['type']} -
+                    {v['string']}"</span></span>
+                <span class="cl"><span class="ck"> if</span><span class="cv"> v[</span><span
+                    class="cs">'type'</span><span class="cv">] == </span><span class="cs">'many2one'</span><span
+                    class="cv">:</span></span>
+                <span class="cl"><span class="cv"> field_desc += f</span><span class="cs">" | Related:
+                    {v['relation']}"</span></span>
+                <span class="cl"><span class="cv"> rich_schema[k] = field_desc</span></span>
+                <span class="cl"></span>
+                <span class="cl"><span class="cc"> # 3. Inyectar esquema dinámico en el prompt de Gemini</span></span>
+                <span class="cl"><span class="cv"> prompt = f</span><span class="cs">"""Extract data for Odoo model
+                    '{model_name}'.</span></span>
+                <span class="cl"><span class="cs"> Schema: {json.dumps(rich_schema)[:3500]}</span></span>
+                <span class="cl"><span class="cs"> Rules: Return JSON compatible with Odoo."""</span></span>
+                <span class="cl"><span class="cv"> res = </span><span class="ck">await</span><span class="cv">
+                    client.</span><span class="cf">generate_content</span><span class="cv">(model=MODEL,
+                    contents=prompt)</span></span>
+                <span class="cl"><span class="ck"> return</span><span class="cv">
+                    json.loads(res.text.strip())</span></span>
+              </div>
+            </div>
+            <div class="c3d-card" data-idx="1">
+              <div class="c3d-bar">
+                <div class="c3d-dot" style="background:#ff5f57;"></div>
+                <div class="c3d-dot" style="background:#febc2e;"></div>
+                <div class="c3d-dot" style="background:#28c840;"></div>
+                <div class="c3d-title">ai_processor.py — understand_intent()</div>
+              </div>
+              <div class="c3d-body">
+                <span class="cl"><span class="ck">async</span> <span class="ck">def</span> <span
+                    class="cf">understand_intent</span><span class="cv">(self, text, last_context):</span></span>
+                <span class="cl"><span class="cc"> """ Determina acción + modelo Odoo desde lenguaje natural
+                    """</span></span>
+                <span class="cl"></span>
+                <span class="cl"><span class="cc"> # Memoria de sesión: entiende "ese cliente", "el de
+                    antes"</span></span>
+                <span class="cl"><span class="ck"> if</span><span class="cv"> last_context:</span></span>
+                <span class="cl"><span class="cv"> context_hint = f</span><span class="cs">"Last Record:
+                    {last_context}"</span></span>
+                <span class="cl"></span>
+                <span class="cl"><span class="cv"> prompt = f</span><span class="cs">"""</span></span>
+                <span class="cl"><span class="cs"> Analyze: "{text}"</span></span>
+                <span class="cl"><span class="cs"> 1. Action: create | update | search | analyze | execute</span></span>
+                <span class="cl"><span class="cs"> 2. Model: crm.lead, res.partner, stock.quant...</span></span>
+                <span class="cl"><span class="cs"> 3. Execute: action_confirm, button_validate,</span></span>
+                <span class="cl"><span class="cs"> action_set_won, action_set_lost...</span></span>
+                <span class="cl"><span class="cs"> Return JSON: {"action":"...", "model":"..."}</span></span>
+                <span class="cl"><span class="cs"> """</span></span>
+                <span class="cl"><span class="cv"> res = </span><span class="ck">await</span><span class="cv">
+                    client.</span><span class="cf">generate_content</span><span class="cv">(model=MODEL,
+                    contents=prompt)</span></span>
+                <span class="cl"><span class="ck"> return</span><span class="cv"> json.loads(res.text)</span></span>
+              </div>
+            </div>
+            <div class="c3d-card" data-idx="2">
+              <div class="c3d-bar">
+                <div class="c3d-dot" style="background:#ff5f57;"></div>
+                <div class="c3d-dot" style="background:#febc2e;"></div>
+                <div class="c3d-dot" style="background:#28c840;"></div>
+                <div class="c3d-title">bot_handlers.py — handle_input() · Pipeline completo</div>
+              </div>
+              <div class="c3d-body">
+                <span class="cl"><span class="ck">async</span> <span class="ck">def</span> <span
+                    class="cf">handle_input</span><span class="cv">(update, context, voice_file=</span><span
+                    class="ck">None</span><span class="cv">):</span></span>
+                <span class="cl"><span class="cc"> # 1. Transcripción OGG → texto (Gemini multimodal
+                    nativo)</span></span>
+                <span class="cl"><span class="ck"> if</span><span class="cv"> voice_file: text = </span><span
+                    class="ck">await</span><span class="cv"> ai.</span><span class="cf">transcribe</span><span
+                    class="cv">(temp_path)</span></span>
+                <span class="cl"></span>
+                <span class="cl"><span class="cc"> # 2. Intención + modelo Odoo (con memoria de sesión)</span></span>
+                <span class="cl"><span class="cv"> intent = </span><span class="ck">await</span><span class="cv">
+                    ai.</span><span class="cf">understand_intent</span><span class="cv">(text,
+                    last_context)</span></span>
+                <span class="cl"><span class="cv"> action, model = intent[</span><span class="cs">'action'</span><span
+                    class="cv">], intent[</span><span class="cs">'model'</span><span class="cv">]</span></span>
+                <span class="cl"></span>
+                <span class="cl"><span class="cc"> # 3. Extracción con esquema dinámico</span></span>
+                <span class="cl"><span class="cv"> raw = </span><span class="ck">await</span><span class="cv">
+                    ai.</span><span class="cf">extract_structured_data</span><span class="cv">(text,
+                    model)</span></span>
+                <span class="cl"></span>
+                <span class="cl"><span class="cc"> # 4. Resolución IDs Many2one, conversión fechas UTC</span></span>
+                <span class="cl"><span class="cv"> data = </span><span class="ck">await</span><span class="cv">
+                    ai.</span><span class="cf">process_odoo_values</span><span class="cv">(model, raw)</span></span>
+                <span class="cl"></span>
+                <span class="cl"><span class="cc"> # 5. HitL: confirmación explícita antes de escribir en
+                    BD</span></span>
+                <span class="cl"><span class="cv"> keyboard = [[InlineKeyboardButton(</span><span class="cs">"✅
+                    Confirmar"</span><span class="cv">,...)]]</span></span>
+                <span class="cl"><span class="ck"> await</span><span class="cv"> reply(update, preview_json,
+                    keyboard)</span></span>
+                <span class="cl"><span class="cc"> # → usuario confirma →
+                    odoo.execute(model,'create',data)</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="c3d-desc" id="c3desc">
+          <h3 id="c3t">🔬 Inyección Dinámica de Esquema</h3>
+          <p id="c3p">La innovación central: el bot consulta a Odoo qué campos existen en ese modelo y los inyecta en el
+            prompt. Funciona para <strong>cualquier módulo sin programación adicional</strong>.</p>
+        </div>
+        <div class="c3d-ctrl">
+          <button class="c3d-btn" onclick="cPrev()">&#8592;</button>
+          <div class="c3d-dot-nav on" onclick="cGo(0)"></div>
+          <div class="c3d-dot-nav" onclick="cGo(1)"></div>
+          <div class="c3d-dot-nav" onclick="cGo(2)"></div>
+          <button class="c3d-btn" onclick="cNext()">&#8594;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 7 · DEMO CRM ═══════ -->
+    <div class="slide" data-orb="1">
+      <div class="eyebrow a">06 · Demostración CRM</div>
+      <div class="g2" style="flex:1;">
+        <div class="ph-w a">
+          <div class="ph"><video autoplay muted loop playsinline>
+              <source src="Presentacion-Mercafilo/3.CRM.mp4" type="video/mp4">
+            </video></div>
+        </div>
+        <div>
+          <h2 class="a">CRM creado<br>en <span class="ac">21.80 segundos.</span></h2>
+          <p class="a">Un comercial dicta el resultado de su visita mientras conduce. La IA extrae cliente, importe,
+            prioridad y notas, crea la oportunidad en Odoo y devuelve el enlace directo al registro.</p>
+          <ul class="ul stag a">
+            <li><i class="fa-solid fa-microphone ac"></i><span>Audio OGG procesado <strong>directamente</strong> por
+                Gemini 2.5 Flash. Sin motor STT intermediario.</span></li>
+            <li><i class="fa-solid fa-shield-halved bl"></i><span><strong>HitL:</strong> el sistema muestra el JSON
+                extraído y espera confirmación antes de escribir en BD.</span></li>
+            <li><i class="fa-solid fa-chart-line ac"></i><span>Mejora medida: <strong>−41.2%</strong> vs. proceso manual
+                (37.06s → 21.80s · Tabla 8, TFG).</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 8 · DEMO MÓDULOS: VENTAS + INVENTARIO ═══════ -->
+    <div class="slide" data-orb="2">
+      <div class="eyebrow a">07 · Un Bot. Todos los Módulos.</div>
+      <h2 class="a" style="margin-bottom:.5rem;">La misma voz.<br><span class="bl">Módulos distintos.</span></h2>
+      <p class="a" style="margin-bottom:1.5vh;">La inyección dinámica de esquema hace que el bot funcione con
+        <strong>cualquier modelo Odoo</strong> sin tocar el código. Demostración en dos módulos simultáneos.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5vw;flex:1;align-items:center;" class="a">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+          <div class="ph" style="width:min(16vw,180px);"><video autoplay muted loop playsinline>
+              <source src="Presentacion-Mercafilo/3.VENTAS.mp4" type="video/mp4">
+            </video></div>
+          <div class="box gB" style="width:100%;padding:10px 14px;text-align:center;">
+            <p style="margin:0 0 3px;font-size:.78rem;font-weight:700;color:var(--bl);"><i
+                class="fa-solid fa-file-invoice"></i>&ensp;Módulo Ventas</p>
+            <p style="margin:0;font-size:.72rem;">Pedido confirmado por voz · <span class="ac">action_confirm()</span>
+            </p>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+          <div class="ph" style="width:min(16vw,180px);"><video autoplay muted loop playsinline>
+              <source src="Presentacion-Mercafilo/2inventario.mp4" type="video/mp4">
+            </video></div>
+          <div class="box gG" style="width:100%;padding:10px 14px;text-align:center;">
+            <p style="margin:0 0 3px;font-size:.78rem;font-weight:700;color:var(--ac);"><i
+                class="fa-solid fa-boxes-stacked"></i>&ensp;Módulo Inventario</p>
+            <p style="margin:0;font-size:.72rem;">Stock consultado en tiempo real · <span class="bl">stock.quant</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 9 · METODOLOGÍA ═══════ -->
+    <div class="slide" data-orb="1">
+      <div class="eyebrow a">08 · Metodología Experimental</div>
+      <div class="g2" style="flex:1;">
+        <div>
+          <h2 class="a">160 pruebas.<br><span class="ac">4 entornos.</span><br>Un veredicto.</h2>
+          <p class="a">Corpus de <strong>160 grabaciones</strong>, 16 estudiantes IOI como testers, 5 tipos de tarea
+            distintos. Los 4 escenarios fueron diseñados deliberadamente para exponer las vulnerabilidades del sistema
+            en condiciones extremas.</p>
+        </div>
+        <div class="tl a">
+          <div class="tr">
+            <div class="td dG">1</div>
+            <div><strong>Proceso Manual (Benchmark)</strong>
+              <p style="font-size:.78rem;margin-top:2px;">Interfaz web Odoo estándar. Línea base científica del estudio.
+              </p>
+            </div>
+          </div>
+          <div class="tr">
+            <div class="td dB">2</div>
+            <div><strong>PC Local (Edge)</strong>
+              <p style="font-size:.78rem;margin-top:2px;">AMD Ryzen 7 · 8GB RAM. Latencia pura del algoritmo sin red.
+              </p>
+            </div>
+          </div>
+          <div class="tr">
+            <div class="td dR">3</div>
+            <div><strong>Cloud Run Throttled</strong>
+              <p style="font-size:.78rem;margin-top:2px;">CPU solo durante procesamiento. Cold Start activo. Peor caso
+                de producción.</p>
+            </div>
+          </div>
+          <div class="tr">
+            <div class="td dA">4</div>
+            <div><strong>Cloud Run Always On</strong>
+              <p style="font-size:.78rem;margin-top:2px;">2 vCPU · instancias mínimas=1. Configuración de producción
+                real recomendada.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 10 · RESULTADOS ═══════ -->
+    <div class="slide" data-orb="3" id="sl-res">
+      <div class="eyebrow a">09 · Resultados Empíricos</div>
+      <div class="g2" style="flex:1;align-items:stretch;margin-top:.8vh;">
+        <div style="display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <h2 class="a">La CPU lo<br><span class="ac">cambia todo.</span></h2>
+            <p class="a" style="margin-bottom:0;">Serverless básico: <span class="rd">×2.8 más lento</span> que el
+              humano. Cloud Always On: <span class="ac">−41% más rápido</span>. La infraestructura es tan crítica como
+              el algoritmo (Tabla 8, TFG).</p>
+          </div>
+          <div class="a" style="margin-top:auto;padding-top:2vh;">
+            <div class="br">
+              <div class="bm" style="font-size:12px;margin-bottom:7px;"><span>1. Manual (Benchmark)</span><span
+                  style="color:var(--m2);">37.06s · 53.17s</span></div>
+              <div class="bt">
+                <div class="bf" id="b1" style="background:var(--m2);"></div>
+              </div>
+            </div>
+            <div class="br">
+              <div class="bm" style="font-size:12px;margin-bottom:7px;"><span>2. PC Local</span><span class="bl">24.10s
+                  · 29.40s</span></div>
+              <div class="bt">
+                <div class="bf" id="b2" style="background:var(--bl);"></div>
+              </div>
+            </div>
+            <div class="br">
+              <div class="bm" style="font-size:12px;margin-bottom:7px;"><span>3. Cloud Run <span
+                    class="rd">Throttled</span></span><span class="rd">85.81s · 105.53s</span></div>
+              <div class="bt">
+                <div class="bf" id="b3" style="background:var(--rd);"></div>
+              </div>
+            </div>
+            <div class="br" style="margin-bottom:0;">
+              <div class="bm" style="font-size:12px;margin-bottom:7px;"><span>4. Cloud Run <span class="ac">Always
+                    On</span></span><span class="ac">21.80s · 26.15s</span></div>
+              <div class="bt">
+                <div class="bf" id="b4" style="background:var(--ac);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:14px;" class="a">
+          <div class="box gR"
+            style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div class="kpi rd" style="font-size:clamp(2.5rem,5vw,4.2rem);">×2.8</div>
+            <p style="font-size:.82rem;margin-top:8px;">Más lento que manual<br><small>(Throttled, CRM)</small></p>
+          </div>
+          <div class="box gG"
+            style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div class="kpi ac" style="font-size:clamp(2.5rem,5vw,4.2rem);">−41%</div>
+            <p style="font-size:.82rem;margin-top:8px;">Más rápido que manual<br><small>(Always On, CRM)</small></p>
+          </div>
+          <div class="box gG"
+            style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div class="kpi ac" style="font-size:clamp(2.5rem,5vw,4.2rem);">−51%</div>
+            <p style="font-size:.82rem;margin-top:8px;">Más rápido que manual<br><small>(Always On, Contactos)</small>
+            </p>
+          </div>
+          <div class="box gB"
+            style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div class="kpi bl" style="font-size:clamp(2.5rem,5vw,4.2rem);"><span id="warN">0</span>%</div>
+            <p style="font-size:.82rem;margin-top:8px;">Precisión WAR<br><small>160 grabaciones</small></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 11 · IMPACTO ═══════ -->
+    <div class="slide" data-orb="2">
+      <div class="eyebrow a">10 · Ergonomía Cognitiva · ODS 8</div>
+      <div class="g2" style="flex:1;">
+        <div>
+          <h2 class="a">Más rápido.<br>Más seguro.<br><span class="ac">Más humano.</span></h2>
+          <p class="a">El sistema elimina la carga cognitiva del trabajador de campo: de <strong>37 segundos de atención
+              ininterrumpida</strong> a una nota de voz de 8 palabras mientras conduce al siguiente cliente.</p>
+          <div class="box a" style="margin-top:1rem;border-left:3px solid var(--am);padding:11px 14px;">
+            <p style="margin:0;font-size:.82rem;"><strong style="color:var(--am);">ODS 8 — Trabajo Decente y Crecimiento
+                Económico:</strong> Aumenta la productividad del comercial sin añadir carga. Elimina el trabajo
+              repetitivo para que pueda centrarse en lo que importa: vender.</p>
+          </div>
+        </div>
+        <div class="a" style="display:flex;flex-direction:column;gap:12px;justify-content:center;">
+          <div class="sb gR">
+            <div>
+              <div class="sb-num rd">37.06s</div>
+              <p style="font-size:.72rem;margin-top:2px;color:var(--mu);">CRM manual</p>
+            </div>
+            <i class="fa-solid fa-arrow-right" style="color:var(--mu);font-size:1.2rem;"></i>
+            <div>
+              <div class="sb-num ac">21.80s</div>
+              <p style="font-size:.72rem;margin-top:2px;color:var(--mu);">Con bot</p>
+            </div>
+            <span class="sb-tag"
+              style="background:rgba(61,255,160,.1);border:1px solid rgba(61,255,160,.3);color:var(--ac);">−41%</span>
+          </div>
+          <div class="sb gG">
+            <div>
+              <div class="sb-num rd">53.17s</div>
+              <p style="font-size:.72rem;margin-top:2px;color:var(--mu);">Alta contacto manual</p>
+            </div>
+            <i class="fa-solid fa-arrow-right" style="color:var(--mu);font-size:1.2rem;"></i>
+            <div>
+              <div class="sb-num ac">26.15s</div>
+              <p style="font-size:.72rem;margin-top:2px;color:var(--mu);">Con bot</p>
+            </div>
+            <span class="sb-tag"
+              style="background:rgba(61,255,160,.1);border:1px solid rgba(61,255,160,.3);color:var(--ac);">−51%</span>
+          </div>
+          <div class="sb gB">
+            <div>
+              <div class="sb-num bl">93.2%</div>
+              <p style="font-size:.72rem;margin-top:2px;color:var(--mu);">WAR — Precisión de transcripción</p>
+            </div>
+            <i class="fa-solid fa-microphone" style="color:var(--bl);font-size:1.4rem;margin-left:auto;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 12 · CIERRE ═══════ -->
+    <div class="slide" data-orb="1">
+      <div class="eyebrow a"><i class="fa-solid fa-flag-checkered"></i>Conclusión · Líneas de Futuro</div>
+      <div class="g2" style="flex:1;align-items:flex-start;margin-top:.5vh;">
+        <div>
+          <h1 class="a" style="font-size:clamp(1.8rem,3.8vw,5rem);margin-bottom:.9rem;">Odoo ya entiende<br>el idioma
+            del <span class="ac">campo.</span></h1>
+          <p class="a" style="font-size:clamp(.82rem,1.05vw,1rem);color:var(--tx);line-height:1.65;margin-bottom:1rem;">
+            La integración de voz con IA elimina la fricción entre el trabajador en ruta y el ERP. No es el futuro —
+            <strong>ya funciona, está medido y está documentado</strong>.
+          </p>
+          <div class="a" style="display:flex;flex-direction:column;gap:9px;">
+            <div class="box gG" style="padding:11px 17px;">
+              <p
+                style="font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--ac);margin-bottom:3px;">
+                Repositorio GitHub</p>
+              <p style="margin:0;font-size:.85rem;color:var(--tx);"><i class="fa-brands fa-github"></i>&ensp;github.com
+                / byronperezch · ODOO-VOZ</p>
+            </div>
+            <div class="box gB" style="padding:11px 17px;">
+              <p
+                style="font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--bl);margin-bottom:3px;">
+                Autor</p>
+              <p style="margin:0;font-size:.85rem;color:var(--tx);">Byron Andres Perez Chavez · IOI · UEV 2026</p>
+            </div>
+          </div>
+          <div class="a" style="margin-top:1.2rem;font-size:clamp(.95rem,1.5vw,1.35rem);color:var(--mu);">
+            ¿Preguntas del tribunal?
+          </div>
+        </div>
+        <div>
+          <h3 class="a"
+            style="color:var(--ac);font-size:.8rem;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:.8rem;">
+            <i class="fa-solid fa-rocket"></i>&ensp;Líneas de Trabajo Futuras
+          </h3>
+          <div class="tl a">
+            <div class="tr">
+              <div class="td dG"><i class="fa-solid fa-layer-group" style="font-size:.7rem;"></i></div>
+              <div><strong>Módulos adicionales</strong>
+                <p style="font-size:.76rem;margin-top:2px;">Extensión a RRHH, Contabilidad, Proyectos y Compras con cero
+                  cambios en el núcleo del bot.</p>
+              </div>
+            </div>
+            <div class="tr">
+              <div class="td dB"><i class="fa-solid fa-globe" style="font-size:.7rem;"></i></div>
+              <div><strong>Soporte multiidioma</strong>
+                <p style="font-size:.76rem;margin-top:2px;">Gemini ya soporta +40 idiomas. El prompt adapta el locale
+                  automáticamente al idioma del usuario.</p>
+              </div>
+            </div>
+            <div class="tr">
+              <div class="td dR"><i class="fa-solid fa-mobile-screen" style="font-size:.7rem;"></i></div>
+              <div><strong>App nativa vs. Bot</strong>
+                <p style="font-size:.76rem;margin-top:2px;">Evaluar migración a PWA o integración directa con el
+                  asistente de voz nativo del SO móvil.</p>
+              </div>
+            </div>
+            <div class="tr">
+              <div class="td dA"><i class="fa-solid fa-brain" style="font-size:.7rem;"></i></div>
+              <div><strong>Fine-tuning sectorial</strong>
+                <p style="font-size:.76rem;margin-top:2px;">Modelo entrenado con transcripciones Odoo reales para
+                  reducir alucinaciones en datos numéricos.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- #deck -->
+
+  <script>
+    /* ── PARTICLES CANVAS ── */
+    (function () {
+      const c = document.getElementById('cvs'), ctx = c.getContext('2d');
+      let W, H, pts = [];
+      function resize() { W = c.width = innerWidth; H = c.height = innerHeight; pts = []; for (let i = 0; i < 80; i++)pts.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * .8 + .2, vx: (Math.random() - .5) * .15, vy: (Math.random() - .5) * .15, o: Math.random() * .5 + .1 }); }
+      resize(); window.addEventListener('resize', resize);
+      function draw() { ctx.clearRect(0, 0, W, H); pts.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(61,255,160,${p.o})`; ctx.fill(); p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > W) p.vx *= -1; if (p.y < 0 || p.y > H) p.vy *= -1; }); requestAnimationFrame(draw); }
+      draw();
+    })();
+
+    /* ── SLIDE ENGINE ── */
+    const slides = Array.from(document.querySelectorAll('#deck .slide'));
+    const N = slides.length;
+    let cur = 0;
+
+    function go(d) {
+      const nxt = (cur + d + N) % N;
+      slides[cur].classList.remove('active');
+      slides[cur].classList.add(d > 0 ? 'ex-l' : 'ex-r');
+      setTimeout(() => slides[cur].classList.remove('ex-l', 'ex-r'), 650);
+      cur = nxt;
+      slides[cur].classList.add('active');
+      chrome();
+      // Orbs
+      const ob = slides[cur].dataset.orb || '1';
+      document.getElementById('o1').classList.toggle('on', ob === '1');
+      document.getElementById('o2').classList.toggle('on', ob === '2');
+      document.getElementById('o3').classList.toggle('on', ob === '3');
+      // Triggers
+      if (cur === 1) setTimeout(() => { cnt('n53', 0, 53, 1800, 0); animBar('fbar', 100, 2800); }, 350);
+      if (cur === 4) setTimeout(archAnimate, 400);
+      if (cur === 9) setTimeout(() => { animBars(); setTimeout(() => cnt('warN', 0, 93, 1800, 0), 600); }, 350);
+    }
+
+    function chrome() {
+      document.getElementById('pfill').style.width = ((cur + 1) / N * 100) + '%';
+      document.getElementById('ctr').textContent = (cur + 1) + ' / ' + N;
+      document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('on', i === cur));
+    }
+
+    /* Dots */
+    const dotsCtr = document.getElementById('dots');
+    slides.forEach((_, i) => { const d = document.createElement('div'); d.className = 'dot'; d.onclick = () => { if (i !== cur) go(i > cur ? i - cur : -(cur - i)); }; dotsCtr.appendChild(d); });
+    chrome();
+    document.getElementById('o1').classList.add('on');
+
+    /* ── ANIMATED COUNTER ── */
+    function cnt(id, from, to, ms, dec) {
+      const el = document.getElementById(id); if (!el) return;
+      const step = 16, total = Math.ceil(ms / step); let f = 0;
+      const t = setInterval(() => { f++; const v = from + (to - from) * (f / total); el.textContent = dec ? v.toFixed(dec) : Math.round(v); if (f >= total) { el.textContent = dec ? to.toFixed(dec) : to; clearInterval(t); } }, step);
+    }
+
+    /* ── BAR ANIMATION ── */
+    function animBar(id, pct, delay) { setTimeout(() => { const el = document.getElementById(id); if (el) el.style.width = pct + '%'; }, delay || 100); }
+    function animBars() {
+      // Normalized: max is 105.53s = 100%
+      setTimeout(() => {
+        if (document.getElementById('b1')) document.getElementById('b1').style.width = '35%';  // 37.06/105.53
+        if (document.getElementById('b2')) document.getElementById('b2').style.width = '23%';  // 24.10/105.53
+        if (document.getElementById('b3')) document.getElementById('b3').style.width = '81%';  // 85.81/105.53
+        if (document.getElementById('b4')) document.getElementById('b4').style.width = '21%';  // 21.80/105.53
+      }, 200);
+    }
+
+    /* ── ARCHITECTURE ANIMATION ── */
+    function archAnimate() {
+      ['an1', 'an2', 'an3', 'an4'].forEach((id, i) => setTimeout(() => { const el = document.getElementById(id); if (el) el.classList.add('lit'); }, i * 300));
+      ['p12', 'p23', 'p34'].forEach((id, i) => setTimeout(() => { const el = document.getElementById(id); if (el) el.classList.add('drawn'); }, 600 + i * 400));
+      [['pt12', 'am12'], ['pt23', 'am23'], ['pt34', 'am34']].forEach(([pid, aid], i) => setTimeout(() => {
+        const el = document.getElementById(pid), an = document.getElementById(aid);
+        if (el && an) { el.setAttribute('opacity', '1'); try { an.beginElement(); } catch (e) { } }
+      }, 1800 + i * 200));
+    }
+
+    /* ── KEYBOARD ── */
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === ' ') go(1);
+      else if (e.key === 'ArrowLeft') go(-1);
+    });
+
+    /* ── SWIPE (window, capture phase — ignora si swipe es dentro del carrusel) ── */
+    let _sx = 0, _sy = 0, _mv = false, _inCar = false;
+    const _cstage = document.getElementById('cstage');
+    window.addEventListener('pointerdown', e => {
+      _sx = e.clientX; _sy = e.clientY; _mv = true;
+      _inCar = _cstage ? _cstage.contains(e.target) : false;
+    }, { capture: true, passive: true });
+    window.addEventListener('pointerup', e => {
+      if (!_mv || _inCar) { _mv = false; return; } _mv = false;
+      const dx = e.clientX - _sx, dy = e.clientY - _sy;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 52) go(dx < 0 ? 1 : -1);
+    }, { capture: true, passive: true });
+    window.addEventListener('pointercancel', () => { _mv = false; _inCar = false; }, { passive: true });
+
+    /* ── CODE CAROUSEL ── */
+    const C3DESCS = [
+      { t: '🔬 Inyección Dinámica de Esquema', p: 'La innovación central: el bot consulta a Odoo qué campos existen en ese modelo y los inyecta en el prompt. Funciona para <strong>cualquier módulo sin programación adicional</strong>.' },
+      { t: '🧠 Razonamiento de Intención', p: 'Gemini interpreta lenguaje natural y lo convierte en una acción Odoo con memoria de sesión. Entiende referencias como <strong>"ese cliente"</strong> o <strong>"la última oportunidad"</strong>.' },
+      { t: '⚡ Pipeline completo — 5 pasos', p: 'Voz → Texto → Intención → Datos → HitL → Odoo. Handler asíncrono con batch processing, gestión de errores y resolución dinámica de IDs Many2one.' }
+    ];
+    let cAct = 0;
+
+    function cUpdate() {
+      const cards = document.querySelectorAll('.c3d-card');
+      cards.forEach(card => {
+        const isActive = parseInt(card.dataset.idx) === cAct;
+        /* fade puro: sin transforms inline, solo clase */
+        if (isActive) { card.classList.add('c-active'); }
+        else { card.classList.remove('c-active'); }
+      });
+      document.querySelectorAll('.c3d-dot-nav').forEach((d, i) => d.classList.toggle('on', i === cAct));
+      document.getElementById('c3t').textContent = C3DESCS[cAct].t;
+      document.getElementById('c3p').innerHTML = C3DESCS[cAct].p;
+    }
+    function cGo(idx) { cAct = idx; cUpdate(); }
+    function cNext() { cAct = (cAct + 1) % 3; cUpdate(); }
+    function cPrev() { cAct = (cAct + 2) % 3; cUpdate(); }
+    cUpdate();
+
+    /* Touch en el carrusel */
+    (function () {
+      const stage = document.getElementById('cstage'); if (!stage) return;
+      let sx = 0;
+      stage.addEventListener('pointerdown', e => { sx = e.clientX; try { stage.setPointerCapture(e.pointerId); } catch (_) { } }, { passive: true });
+      stage.addEventListener('pointerup', e => { const dx = e.clientX - sx; if (Math.abs(dx) > 36) { dx < 0 ? cNext() : cPrev(); } }, { passive: true });
+    })();
+  </script>
+</body>
+
+</html>
